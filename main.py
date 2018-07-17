@@ -56,7 +56,7 @@ def get_image(west, south, east, north, zoom):
         ((max_x - min_x + 1) * tile_size, (max_y - min_y + 1) * tile_size)
     )
 
-    pool = multiprocessing.Pool(8)
+    pool = multiprocessing.Pool(16)
     results = pool.map(_download_tile, tiles)
 
     for img, tile in results:
@@ -78,8 +78,6 @@ if __name__ == '__main__':
                 'lng': p[0],
             })
 
-    # points = points[:1000]
-
     min_lat = min([i['lat'] for i in points])
     min_lng = min([i['lng'] for i in points])
     max_lat = max([i['lat'] for i in points])
@@ -99,17 +97,19 @@ if __name__ == '__main__':
     ky = image.size[1] / (max_mercator_lat - min_mercator_lat)
 
     def get_xy(point):
-        x, y = mercantile.xy(point['lng'], point['lat'])
-        x = (x - min_mercator_lng) * kx
-        y = image.size[1] - (y - min_mercator_lat) * ky
-        return x, y
+        return mercantile.xy(point['lng'], point['lat'])
 
     image_data = BytesIO()
     image.save(image_data, format='png')
     image_data.seek(0)
     with cairo.ImageSurface.create_from_png(image_data) as surface:
         context = cairo.Context(surface)
-        context.set_line_width(15)
+
+        context.translate(0, image.size[1])
+        context.scale(kx, -ky)
+        context.translate(-min_mercator_lng, -min_mercator_lat)
+
+        context.set_line_width(15 / kx)
         context.set_source_rgba(255, 0, 0, 0.5)
         for index, p in enumerate(points):
             x, y = get_xy(p)
@@ -119,14 +119,10 @@ if __name__ == '__main__':
                 context.line_to(x, y)
         context.stroke()
 
-        context.set_source_rgba(255, 0, 0, 0.85)
-        x, y = get_xy(points[0])
-        context.arc(x, y, 13, 0, 2 * math.pi)
-        context.fill()
-
-        context.set_source_rgba(255, 0, 0, 0.85)
-        x, y = get_xy(points[-1])
-        context.arc(x, y, 13, 0, 2 * math.pi)
-        context.fill()
+        for p in [points[0], points[1]]:
+            context.set_source_rgba(255, 0, 0, 0.5)
+            x, y = get_xy(p)
+            context.arc(x, y, 20 / kx, 0, 2 * math.pi)
+            context.fill()
 
         surface.write_to_png("irkutsk_kyahta.png")
