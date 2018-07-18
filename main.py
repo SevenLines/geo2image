@@ -16,7 +16,8 @@ from cairo._cairo import Context
 
 
 class GeoImageImageIsNotInitialized(Exception):
-    pass
+    def __init__(self):
+        super().__init__("Call update() to download tiles")
 
 
 class GeoImage(object):
@@ -27,8 +28,8 @@ class GeoImage(object):
         self._south = south
         self._east = east
         self._north = north
-        self._zoom = default_zoom
         self._image = None
+        self.zoom = default_zoom
         self.pool_workers = pool_workers
 
     @staticmethod
@@ -58,7 +59,7 @@ class GeoImage(object):
         :param zoom: wanted size
         :return: Image
         """
-        tiles = list(mercantile.tiles(self._west, self._south, self._east, self._north, self._zoom))
+        tiles = list(mercantile.tiles(self._west, self._south, self._east, self._north, self.zoom))
 
         min_x = min_y = max_x = max_y = None
 
