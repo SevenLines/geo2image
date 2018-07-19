@@ -70,6 +70,8 @@ class GeoImage(object):
 
         pool = multiprocessing.Pool(self.pool_workers)
         results = pool.map(self._download_tile, tiles)
+        pool.close()
+        pool.join()
 
         for img, tile in results:
             left = tile.x - min_x
